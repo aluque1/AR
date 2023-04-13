@@ -26,10 +26,7 @@
             |
             v
           close 
-*/
 
-
-/* 
     UDP Server that listens to the port passed as first param.
     waits for a message from the client comprised of a single character.
     If the character is 'q' it closes the connection.
