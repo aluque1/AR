@@ -10,7 +10,7 @@
 #include <time.h>
 
 
-#define BUF_SIZE 500
+#define BUF_SIZE 512
 
 /* 
          socket
