@@ -7,6 +7,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <time.h>
+
 
 #define BUF_SIZE 500
 
@@ -50,8 +52,9 @@ int main(int argc, char *argv[])
     }
 
     // -------------- socket & bind --------------
+        // creation of UDP socket
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
+    hints.ai_family = AF_INET6; //IPv6 but accepts IPv4
     hints.ai_socktype = SOCK_DGRAM; // UDP
     hints.ai_flags = AI_PASSIVE; // use my IP
     hints.ai_protocol = 0; // any protocol. Will be UDP because of SOCK_DGRAM
@@ -86,57 +89,50 @@ int main(int argc, char *argv[])
 
     // -------------- recvfrom & sendto --------------
     
+    for (;;)
+    {
+        peer_addr_len = sizeof(struct sockaddr_storage);
+        nread = recvfrom(sfd, buf, BUF_SIZE, 0, (struct sockaddr *) &peer_addr, &peer_addr_len);
+        if (nread == -1)
+            continue; // error, keep going
+
+        char host[NI_MAXHOST], service[NI_MAXSERV];
+
+        s = getnameinfo((struct sockaddr *) &peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
+        if (s == 0)
+            printf("Received %ld bytes from %s:%s\n", (long) nread, host, service);
+        else
+            fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+
+        if (nread == 0)
+            continue; // nothing to read, keep going
+
+        if (buf[0] == 'q')
+            break; // close connection
+
+        if (buf[0] == 'h')
+        {
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+            char s[64];
+            strftime(s, sizeof(s), "%T", tm);
+            printf("%s\n", s);
+            sendto(sfd, s, strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
+        }
+
+        if (buf[0] == 'd')
+        {
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+            char s[64];
+            strftime(s, sizeof(s), "%F", tm);
+            printf("%s\n", s);
+            sendto(sfd, s, strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
+        }
+    }
 
     return 0;
 }
-
- /*
-    struct addrinfo hints;
-    struct addrinfo *result, *rp;
-    int sfd, s, j;
-    struct sockaddr_storage peer_addr;
-    socklen_t peer_addr_len;
-    ssize_t nread;
-    char buf[BUF_SIZE];
-
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s port\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
- // -------------- socket & bind -------------- 
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_UNSPEC; // IPv4 or IPv6
-    hints.ai_socktype = SOCK_DGRAM; // UDP
-    hints.ai_flags = AI_PASSIVE; // use my IP
-    hints.ai_protocol = 0; // any protocol. Will be UDP because of SOCK_DGRAM
-    hints.ai_canonname = NULL;
-    hints.ai_addr = NULL;
-    hints.ai_next = NULL;
-
-    s = getaddrinfo(NULL, argv[1], &hints, &result);
-    if (s != 0)
-    {
-        fprintf(stderr, "getaddrunfo: %s \n", gai_strerror(s));
-        exit(EXIT_FAILURE);
-    }
-    
-    // getaddrinfo() returns a list of possible directions. We check each one
-    for (rp = result; rp != NULL; rp = rp->ai_next)
-    {
-        sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (sfd == -1)
-            continue; // keep going
-        
-        if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
-            break; // success
-        
-        if (rp == NULL) 
-            fprintf(stderr, "Could not bind\n"); // no direction works
-            exit(EXIT_FAILURE);
-
-        freeaddrinfo(result); // we don't need it anymore
-        close(sfd);
-    } */
 
 // ============================================================ hombrecito ============================================================
 
