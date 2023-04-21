@@ -111,6 +111,16 @@ int main(int argc, char const *argv[])
             perror("recv");
             exit(EXIT_FAILURE);
         }
+        char host[NI_MAXHOST], service[NI_MAXSERV];
+
+        s = getnameinfo((struct sockaddr *)&peer_addr, peer_addr_len, host, NI_MAXHOST, service, NI_MAXSERV, NI_NUMERICSERV);
+        if (s == 0)
+            printf("Received %ld bytes from %s:%s\n", (long)nread, host, service);
+        else
+            fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+
+        time_t t;
+        struct tm *tm;
 
         // proccess the message
         switch (buf[0])
@@ -119,13 +129,13 @@ int main(int argc, char const *argv[])
             printf("Closing connection with client %s\n", argv[1]);
             break;
         case 'h':
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
+            t = time(NULL);
+            tm = localtime(&t);
             strftime(buf, BUF_SIZE, "%H:%M:%S", tm);
             break;
         case 'd':
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
+            t = time(NULL);
+            tm = localtime(&t);
             strftime(buf, BUF_SIZE, "%T", tm);
             break;
         default:

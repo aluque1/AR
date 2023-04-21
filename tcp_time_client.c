@@ -11,7 +11,6 @@
 
 #define BUF_SIZE 512
 
-
 /*
          socket
             |
@@ -34,6 +33,7 @@ int main(int argc, char const *argv[])
     struct addrinfo hints;
     struct addrinfo *result, *rp;
     int sfd, s;
+    size_t len;
     ssize_t nread;
     char buf[BUF_SIZE];
 
@@ -45,7 +45,7 @@ int main(int argc, char const *argv[])
 
     /* Obtain address(es) matching host/port */
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET6; /* Allow IPv4 or IPv6 */
+    hints.ai_family = AF_INET6;      /* Allow IPv4 or IPv6 */
     hints.ai_socktype = SOCK_STREAM; /* Datagram socket */
     hints.ai_flags = 0;
     hints.ai_protocol = 0; /* Any protocol */
@@ -80,11 +80,34 @@ int main(int argc, char const *argv[])
 
     /* While connection is up send remaining command-line arguments as separate
        datagrams, and read responses from server */
-    
-    // TODO
 
+    for (;;)
+    {
+        printf("Enter command: ");
+        fgets(buf, BUF_SIZE, stdin);
 
+        len = strlen(buf) + 1; // +1 for the null byte
+        if (len + 1 > BUF_SIZE)
+        {
+            fprintf(stderr, "Ignoring long message in argument \n");
+            continue;
+        }
 
+        if (sendto(sfd, buf, len, 0, rp->ai_addr, rp->ai_addrlen) != len)
+        {
+            fprintf(stderr, "Error sending message \n");
+            continue;
+        }
 
+        nread = recvfrom(sfd, buf, BUF_SIZE, 0, rp->ai_addr, &rp->ai_addrlen);
+        if (nread == -1)
+        {
+            perror("recvfrom");
+            exit(EXIT_FAILURE);
+        }
+        printf("Received %ld bytes: %s \n", (long)nread, buf);
+    }
+    // close the socket
+    close(sfd);
     return 0;
 }
