@@ -107,33 +107,35 @@ int main(int argc, char *argv[])
         if (nread == 0)
             continue; // nothing to read, keep going
 
-        if (buf[0] == 'q')
-            break; // close connection
+        time_t t;
+        struct tm *tm;
+        char s[64];
 
-        else if (buf[0] == 'h')
+        switch (buf[0])
         {
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
-            char s[64];
+        case 'q': // close connection and exit program  
+            printf("Closing connection with %s:%s \n", host, service);
+            close(sfd);
+            exit(EXIT_SUCCESS);
+            break;
+        case 'h':
+            t = time(NULL);
+            tm = localtime(&t);
             strftime(s, sizeof(s), "%T", tm);
             printf("%s\n", s);
             sendto(sfd, s, strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
-        }
-
-        else if (buf[0] == 'd')
-        {
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
-            char s[64];
+            break;
+        case 'd':
+            t = time(NULL);
+            tm = localtime(&t);
             strftime(s, sizeof(s), "%F", tm);
             printf("%s\n", s);
             sendto(sfd, s, strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
-        }
-        else // unkown command
-        {
-            char s[64];
-            sprintf(s, "unknown command : %c [q : quit], [h : hora], [d : dia]\n", buf[0]);
+            break;
+        default:
+            sprintf(s, "unknown command : %c [q : quit], [h : hora], [d : dia]", buf[0]);
             sendto(sfd, s , strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
+            break;
         }
     }
 

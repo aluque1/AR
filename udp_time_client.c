@@ -114,5 +114,7 @@ int main(int argc, char *argv[])
     }
     printf("Received %ld bytes: %s \n", (long)nread, buf);
   }
+  //close the socket
+  close(sfd);
   return 0;
 }
