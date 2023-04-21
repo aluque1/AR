@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 {
     struct addrinfo hints;
     struct addrinfo *result, *rp;
-    int sfd, s, j;
+    int sfd, s;
     struct sockaddr_storage peer_addr;
     socklen_t peer_addr_len;
     ssize_t nread;
@@ -48,41 +48,44 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    // -------------- socket & bind --------------
-        // creation of UDP socket
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET6; //IPv6 but accepts IPv4
-    hints.ai_socktype = SOCK_DGRAM; // UDP
-    hints.ai_flags = AI_PASSIVE; // use my IP
-    hints.ai_protocol = 0; // any protocol. Will be UDP because of SOCK_DGRAM
+    hints.ai_family = AF_INET6;    /* Allow IPv4 or IPv6 */
+    hints.ai_socktype = SOCK_DGRAM; /* Datagram socket */
+    hints.ai_flags = AI_PASSIVE;    /* For wildcard IP address */
+    hints.ai_protocol = 0;          /* Any protocol */
     hints.ai_canonname = NULL;
     hints.ai_addr = NULL;
     hints.ai_next = NULL;
 
     s = getaddrinfo(NULL, argv[1], &hints, &result);
-    if (s != 0)
-    {
-        fprintf(stderr, "getaddrunfo: %s \n", gai_strerror(s));
+    if (s != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
         exit(EXIT_FAILURE);
     }
 
-    // getaddrinfo() returns a list of possible directions. We check each one
-    for (rp = result; rp != NULL; rp = rp->ai_next)
-    {
-        sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    /* getaddrinfo() returns a list of address structures.
+       Try each address until we successfully bind(2).
+       If socket(2) (or bind(2)) fails, we (close the socket
+       and) try the next address. */
+
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        sfd = socket(rp->ai_family, rp->ai_socktype,
+                rp->ai_protocol);
         if (sfd == -1)
-            continue; // keep going
+            continue;
 
         if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
-            break; // success
+            break;                  /* Success */
 
-        if (rp == NULL)
-            fprintf(stderr, "Could not bind\n"); // no direction works
-        exit(EXIT_FAILURE);
-
-        freeaddrinfo(result); // we don't need it anymore
         close(sfd);
     }
+
+    if (rp == NULL) {               /* No address succeeded */
+        fprintf(stderr, "Could not bind\n");
+        exit(EXIT_FAILURE);
+    }
+
+    freeaddrinfo(result);           /* No longer needed */
 
     // -------------- recvfrom & sendto --------------
     
@@ -107,7 +110,7 @@ int main(int argc, char *argv[])
         if (buf[0] == 'q')
             break; // close connection
 
-        if (buf[0] == 'h')
+        else if (buf[0] == 'h')
         {
             time_t t = time(NULL);
             struct tm *tm = localtime(&t);
@@ -117,7 +120,7 @@ int main(int argc, char *argv[])
             sendto(sfd, s, strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
         }
 
-        if (buf[0] == 'd')
+        else if (buf[0] == 'd')
         {
             time_t t = time(NULL);
             struct tm *tm = localtime(&t);
@@ -125,6 +128,12 @@ int main(int argc, char *argv[])
             strftime(s, sizeof(s), "%F", tm);
             printf("%s\n", s);
             sendto(sfd, s, strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
+        }
+        else // unkown command
+        {
+            char s[64];
+            sprintf(s, "unknown command : %c [q : quit], [h : hora], [d : dia]\n", buf[0]);
+            sendto(sfd, s , strlen(s), 0, (struct sockaddr *) &peer_addr, peer_addr_len);
         }
     }
 
