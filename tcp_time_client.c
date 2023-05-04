@@ -106,6 +106,12 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
         printf("Received %ld bytes: %s \n", (long)nread, buf);
+        // if close is sent, close the connection
+        if (buf[0] == 'q')
+        {
+            break;
+        }
+              
     }
     // close the socket
     close(sfd);

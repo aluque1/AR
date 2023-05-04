@@ -131,7 +131,7 @@ int main(int argc, char const *argv[])
         case 'h':
             t = time(NULL);
             tm = localtime(&t);
-            strftime(buf, BUF_SIZE, "%H:%M:%S", tm);
+            strftime(buf, BUF_SIZE, "%F", tm);
             break;
         case 'd':
             t = time(NULL);
